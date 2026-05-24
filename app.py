@@ -74,8 +74,7 @@ def today_iso():
 
 def week_iso_range():
     today = datetime.now()
-    monday = today - timedelta(days=today.weekday())
-    return [(monday + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
+    return [(today + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
 
 
 # ── Routes ────────────────────────────────────────────────────────────
