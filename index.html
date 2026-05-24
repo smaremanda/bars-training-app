@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>BARS · FIELD OPS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red: #CC0000;
+      --red-bright: #FF3333;
+      --red-dim: #992200;
+      --red-glow: rgba(204, 0, 0, 0.25);
+      --bg: #111111;
+      --surface: #1C1C1C;
+      --surface2: #242424;
+      --surface3: #2C2C2C;
+      --border: #333333;
+      --border-red: rgba(204,0,0,0.5);
+      --text: #F5F5F5;
+      --text-dim: #C0C0C0;
+      --text-muted: #808080;
+      --green: #34D974;
+      --green-dim: rgba(52,217,116,0.12);
+      --amber: #FBBF24;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: #030303;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+    }
+
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .phone {
+      width: 100%;
+      max-width: 390px;
+      min-height: 100vh;
+      background: var(--bg);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Background grid */
+    .phone::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 50%; transform: translateX(-50%);
+      width: 390px;
+      height: 100vh;
+      background-image:
+        linear-gradient(rgba(204,0,0,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(204,0,0,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .screen { display: none; position: relative; z-index: 1; }
+    .screen.active { display: block; }
+
+    /* ── HEADER ── */
+    .header {
+      background: linear-gradient(180deg, #0D0000 0%, #0A0A0A 100%);
+      border-bottom: 1px solid var(--border-red);
+      padding: 48px 20px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--red), transparent);
+    }
+
+    .header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .mission-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(204,0,0,0.12);
+      border: 1px solid var(--border-red);
+      border-radius: 3px;
+      padding: 3px 10px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--red-bright);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .pulse-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--red-bright);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--red-bright); }
+      50% { opacity: 0.4; box-shadow: none; }
+    }
+
+    .avatar {
+      width: 36px; height: 36px;
+      border-radius: 3px;
+      background: var(--red);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px; font-weight: 700;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .operative-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #AAAAAA;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .operative-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .mission-meta {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+    }
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .meta-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      color: #999999;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .meta-value {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--red-bright);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── CONTENT ── */
+    .content {
+      padding: 20px 16px 100px;
+    }
+
+    /* ── SECTION LABEL ── */
+    .section-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #999999;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── WORKOUT CARD ── */
+    .workout-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--red);
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .workout-card::before {
+      content: 'CLASSIFIED';
+      position: absolute;
+      top: 12px; right: -8px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--red-dim);
+      transform: rotate(90deg);
+      transform-origin: right center;
+      opacity: 0.4;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .workout-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+    .workout-planned {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--red-bright);
+      margin-top: 4px;
+      letter-spacing: 0.05em;
+    }
+    .workout-icon { font-size: 24px; opacity: 0.8; }
+
+    .workout-desc {
+      font-size: 14px;
+      color: #D8D8D8;
+      line-height: 1.65;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+
+    .ra-alert {
+      margin-top: 10px;
+      background: rgba(204,0,0,0.08);
+      border: 1px solid rgba(204,0,0,0.2);
+      border-radius: 4px;
+      padding: 8px 10px;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .ra-alert-icon {
+      font-size: 11px;
+      color: var(--red-bright);
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+    .ra-alert-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #FF6B6B;
+      line-height: 1.5;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── DATE STRIP ── */
+    .date-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .date-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
+    .type-pill {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 3px;
+      border: 1px solid;
+    }
+    .pill-hike { color: #F59E0B; border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.08); }
+    .pill-strength { color: #A78BFA; border-color: rgba(167,139,250,0.4); background: rgba(167,139,250,0.08); }
+    .pill-walkrun { color: #38BDF8; border-color: rgba(56,189,248,0.4); background: rgba(56,189,248,0.08); }
+    .pill-rest { color: var(--text-muted); border-color: var(--border); background: transparent; }
+
+    /* ── INPUTS ── */
+    .field-group {
+      margin-bottom: 14px;
+    }
+    .field-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #AAAAAA;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .field-row { display: grid; gap: 10px; }
+    .field-row.cols-2 { grid-template-columns: 1fr 1fr; }
+
+    .input-wrap { position: relative; }
+    .input-wrap input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 11px 36px 11px 12px;
+      font-family: 'Space Mono', monospace;
+      font-size: 15px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .input-wrap input:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 2px var(--red-glow);
+    }
+    .input-wrap input::placeholder { color: var(--text-muted); }
+    .input-unit {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    textarea.field-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 11px 12px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      resize: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    textarea.field-input:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 2px var(--red-glow);
+    }
+    textarea.field-input::placeholder { color: var(--text-muted); }
+
+    /* ── ASSESSMENT BUTTONS ── */
+    .assess-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .assess-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .assess-btn:hover { border-color: var(--red); background: var(--surface2); }
+    .assess-btn.selected {
+      border-color: var(--red);
+      background: rgba(204,0,0,0.12);
+      box-shadow: 0 0 10px var(--red-glow);
+    }
+    .assess-emoji { font-size: 18px; display: block; margin-bottom: 4px; }
+    .assess-text {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .assess-btn.selected .assess-text { color: var(--red-bright); }
+
+    /* ── STATUS BUTTONS ── */
+    .status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .status-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 9px 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .status-btn.clear.active { border-color: var(--green); background: var(--green-dim); color: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.2); }
+    .status-btn.caution.active { border-color: var(--amber); background: rgba(245,158,11,0.1); color: var(--amber); }
+    .status-btn.compromised.active { border-color: var(--red-bright); background: rgba(204,0,0,0.1); color: var(--red-bright); box-shadow: 0 0 8px var(--red-glow); }
+
+    /* ── TRANSMIT BUTTON ── */
+    .transmit-btn {
+      width: 100%;
+      background: var(--red);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 15px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .transmit-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
+      transform: translateX(-100%);
+      transition: transform 0.4s;
+    }
+    .transmit-btn:hover::before { transform: translateX(100%); }
+    .transmit-btn:hover { background: #E00000; box-shadow: 0 0 20px var(--red-glow); }
+    .transmit-btn:active { transform: scale(0.99); }
+
+    .edit-btn {
+      width: 100%;
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .edit-btn:hover { border-color: var(--text-muted); color: var(--text); }
+
+    /* ── LOGGED STATE ── */
+    .logged-card {
+      background: var(--green-dim);
+      border: 1px solid rgba(34,197,94,0.3);
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .logged-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .logged-check {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--green);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .logged-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--green);
+    }
+    .logged-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      text-align: center;
+    }
+    .stat-val {
+      font-family: 'Space Mono', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .stat-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      color: var(--text-muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── BOTTOM NAV ── */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 390px;
+      background: rgba(8,8,8,0.95);
+      border-top: 1px solid var(--border);
+      padding: 10px 0 24px;
+      display: flex;
+      justify-content: space-around;
+      z-index: 40;
+      backdrop-filter: blur(10px);
+    }
+    .bottom-nav::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--red-dim), transparent);
+    }
+    .nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      padding: 4px 24px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .nav-icon svg { transition: all 0.15s; }
+    .nav-btn .nav-icon svg { color: var(--text-muted); stroke: var(--text-muted); }
+    .nav-btn.active .nav-icon svg { stroke: var(--red-bright); }
+    .nav-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .nav-btn.active .nav-label { color: var(--red-bright); }
+
+    /* ── WEEK SCREEN ── */
+    .week-summary {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+    }
+    .sum-item {
+      text-align: center;
+      position: relative;
+    }
+    .sum-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: 0; top: 15%; bottom: 15%;
+      width: 1px;
+      background: var(--border);
+    }
+    .sum-val {
+      font-family: 'Space Mono', monospace;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .sum-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      color: #999999;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── DAY CARDS ── */
+    .day-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 13px 14px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+    .day-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      border-radius: 6px 0 0 6px;
+      background: transparent;
+      transition: background 0.15s;
+    }
+    .day-card.logged::before { background: var(--green); }
+    .day-card.today::before { background: var(--red); }
+    .day-card.today {
+      border-color: var(--border-red);
+      background: var(--surface2);
+      box-shadow: 0 0 20px rgba(204,0,0,0.08);
+    }
+    .day-card:hover:not(.today) { border-color: #333; background: var(--surface2); }
+
+    .day-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+    .status-indicator {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .ind-green { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+    .ind-red { background: var(--red-bright); box-shadow: 0 0 6px rgba(255,26,26,0.5); animation: pulse 1.5s ease-in-out infinite; }
+    .ind-gray { background: var(--border); }
+
+    .day-info {}
+    .day-date {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #999999;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .day-today-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      color: var(--red-bright);
+      letter-spacing: 0.12em;
+      margin-bottom: 2px;
+    }
+    .day-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+    .day-sub {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      margin-top: 3px;
+      letter-spacing: 0.03em;
+    }
+    .sub-logged { color: var(--green); }
+    .sub-planned { color: #888888; }
+
+    .day-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .chevron { color: var(--text-muted); }
+
+    /* ── RA NOTE ── */
+    .ra-week-note {
+      background: rgba(204,0,0,0.05);
+      border: 1px solid rgba(204,0,0,0.15);
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-top: 4px;
+    }
+    .ra-note-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--red-bright);
+      margin-bottom: 4px;
+    }
+    .ra-note-body {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #AAAAAA;
+      line-height: 1.6;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 50;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 1px solid var(--border-red);
+      border-radius: 8px 8px 0 0;
+      width: 100%;
+      max-width: 390px;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 20px 18px 40px;
+      position: relative;
+    }
+    .modal-sheet::before {
+      content: '';
+      width: 32px; height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      display: block;
+      margin: 0 auto 18px;
+    }
+    .modal-heading {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .modal-sub {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+    }
+    .modal-desc {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.6;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      margin-bottom: 12px;
+    }
+    .modal-planned {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px 12px;
+    }
+    .modal-planned-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      color: var(--text-muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+    .modal-planned-val {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--red-bright);
+    }
+    .modal-logged-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--green-dim);
+      border: 1px solid rgba(34,197,94,0.3);
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--green);
+      letter-spacing: 0.06em;
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: var(--surface);
+      border: 1px solid var(--green);
+      color: var(--green);
+      padding: 10px 18px;
+      border-radius: 4px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 100;
+      white-space: nowrap;
+      box-shadow: 0 0 20px rgba(34,197,94,0.15);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Divider */
+    .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- ══════════════════════════════════
+       TODAY SCREEN
+  ══════════════════════════════════ -->
+  <div id="screen-today" class="screen active">
+
+    <div class="header">
+      <div class="header-top">
+        <div>
+          <div class="mission-status">
+            <div class="pulse-dot"></div>
+            MISSION ACTIVE
+          </div>
+        </div>
+        <div class="avatar">B</div>
+      </div>
+      <div class="operative-label">OPERATIVE</div>
+      <div class="operative-name">BARS</div>
+      <div class="mission-meta">
+        <div class="meta-item">
+          <span class="meta-label">Phase</span>
+          <span class="meta-value" id="today-phase">—</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Week</span>
+          <span class="meta-value">01 / 13</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Countdown</span>
+          <span class="meta-value">89 DAYS</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Date / type strip -->
+      <div class="date-strip">
+        <span class="date-text" id="today-date-label">Loading...</span>
+        <span class="type-pill pill-hike" id="today-pill">🥾 —</span>
+      </div>
+
+      <!-- Mission briefing -->
+      <div class="section-label">MISSION BRIEFING</div>
+      <div class="workout-card">
+        <div class="card-header">
+          <div>
+            <div class="workout-title" id="workout-title">—</div>
+            <div class="workout-planned" id="workout-planned">—</div>
+          </div>
+          <div class="workout-icon">🏔️</div>
+        </div>
+        <div class="workout-desc" id="workout-desc">
+          Loading today's mission briefing...
+        </div>
+        <div class="ra-alert">
+          <div class="ra-alert-icon">⚠</div>
+          <div class="ra-alert-text">PROTOCOL: Stop if joint pain above 4/10. Ice reactive joints on return to base.</div>
+        </div>
+      </div>
+
+      <!-- Log section -->
+      <div id="log-section">
+        <div class="section-label">DEBRIEF</div>
+
+        <!-- Miles + Vert -->
+        <div class="field-group" id="dist-vert-row">
+          <div class="field-row cols-2">
+            <div>
+              <label class="field-label">Distance</label>
+              <div class="input-wrap">
+                <input type="number" id="actual-miles" placeholder="0.0" step="0.1" min="0" />
+                <span class="input-unit">MI</span>
+              </div>
+            </div>
+            <div>
+              <label class="field-label">Elevation</label>
+              <div class="input-wrap">
+                <input type="number" id="actual-vert" placeholder="0" step="100" min="0" />
+                <span class="input-unit">FT</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time -->
+        <div class="field-group">
+          <label class="field-label">Duration</label>
+          <div class="field-row cols-2">
+            <div class="input-wrap">
+              <input type="number" id="actual-hours" placeholder="0" min="0" max="24" />
+              <span class="input-unit">HR</span>
+            </div>
+            <div class="input-wrap">
+              <input type="number" id="actual-mins" placeholder="0" min="0" max="59" />
+              <span class="input-unit">MIN</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Operative Assessment -->
+        <div class="field-group">
+          <label class="field-label">Operative Assessment</label>
+          <div class="assess-grid">
+            <div class="assess-btn" data-feel="MINIMAL" onclick="selectFeel(this)">
+              <span class="assess-emoji">😴</span>
+              <span class="assess-text">Minimal</span>
+            </div>
+            <div class="assess-btn" data-feel="NOMINAL" onclick="selectFeel(this)">
+              <span class="assess-emoji">😊</span>
+              <span class="assess-text">Nominal</span>
+            </div>
+            <div class="assess-btn" data-feel="HEAVY" onclick="selectFeel(this)">
+              <span class="assess-emoji">😤</span>
+              <span class="assess-text">Heavy</span>
+            </div>
+            <div class="assess-btn" data-feel="DOWN" onclick="selectFeel(this)">
+              <span class="assess-emoji">💀</span>
+              <span class="assess-text">Down</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Field Notes -->
+        <div class="field-group">
+          <label class="field-label">Field Notes <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+          <textarea class="field-input" id="actual-notes" rows="2" placeholder="Knee response? Joint issues? Anything to flag for HQ..."></textarea>
+        </div>
+
+        <!-- Physical Status -->
+        <div class="field-group">
+          <label class="field-label">Physical Status Report</label>
+          <div class="status-grid">
+            <button class="status-btn clear" onclick="setStatus('clear', this)">✅ Clear</button>
+            <button class="status-btn caution" onclick="setStatus('caution', this)">🟡 Caution</button>
+            <button class="status-btn compromised" onclick="setStatus('compromised', this)">🔴 Compromised</button>
+          </div>
+        </div>
+
+        <button class="transmit-btn" onclick="saveLog()">TRANSMIT FIELD REPORT ↗</button>
+      </div>
+
+      <!-- Logged state -->
+      <div id="logged-section" style="display:none;">
+        <div class="section-label">MISSION STATUS</div>
+        <div class="logged-card">
+          <div class="logged-header">
+            <div class="logged-check">
+              <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <span class="logged-title">Report Transmitted</span>
+          </div>
+          <div class="logged-stats">
+            <div>
+              <div class="stat-val" id="summary-miles">—</div>
+              <div class="stat-label">miles</div>
+            </div>
+            <div>
+              <div class="stat-val" id="summary-vert">—</div>
+              <div class="stat-label">feet</div>
+            </div>
+            <div>
+              <div class="stat-val" id="summary-time">—</div>
+              <div class="stat-label">time</div>
+            </div>
+          </div>
+        </div>
+        <button class="edit-btn" onclick="editLog()">AMEND REPORT</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       WEEK SCREEN
+  ══════════════════════════════════ -->
+  <div id="screen-week" class="screen">
+
+    <div class="header">
+      <div class="header-top">
+        <div>
+          <div class="mission-status">
+            <div class="pulse-dot"></div>
+            <span id="week-phase-label">LOADING</span>
+          </div>
+        </div>
+        <div class="avatar">B</div>
+      </div>
+      <div class="operative-label">MISSION TIMELINE</div>
+      <div class="operative-name">This Week</div>
+      <div class="mission-meta">
+        <div class="meta-item">
+          <span class="meta-label">Period</span>
+          <span class="meta-value" id="week-period">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Week summary -->
+      <div class="week-summary">
+        <div class="sum-item">
+          <div class="sum-val" id="week-objectives">— / —</div>
+          <div class="sum-label">OBJECTIVES</div>
+        </div>
+        <div class="sum-item">
+          <div class="sum-val" id="week-miles">0 mi</div>
+          <div class="sum-label">COVERED</div>
+        </div>
+        <div class="sum-item">
+          <div class="sum-val" id="week-elev">0 ft</div>
+          <div class="sum-label">ELEVATION</div>
+        </div>
+      </div>
+
+      <div class="section-label">OBJECTIVES</div>
+
+      <!-- Dynamically rendered by JS -->
+      <div id="week-days"></div>
+
+      <!-- RA Week Note -->
+      <div class="ra-week-note" style="margin-top:8px;">
+        <div class="ra-note-title">⚠ HQ DIRECTIVE · RA MONITORING ACTIVE</div>
+        <div class="ra-note-body">Log joint reactions 24–48 hrs after Strength A (Tue). Week 4 checkpoint determines whether Session C is cleared. Report all anomalies.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="nav-btn active" id="nav-today" onclick="switchScreen('today')">
+      <div class="nav-icon">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="nav-label">Today</div>
+    </div>
+    <div class="nav-btn" id="nav-week" onclick="switchScreen('week')">
+      <div class="nav-icon">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </div>
+      <div class="nav-label">Timeline</div>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+    <div class="modal-sheet">
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast">▶ REPORT TRANSMITTED TO HQ</div>
+
+</div>
+
+<script>
+  // ── State ─────────────────────────────────────────────────────────
+  let selectedFeel = '';
+  let selectedStatus = '';
+  let todayWorkout = null;
+  let weekWorkouts = [];
+
+  // ── Boot ──────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    loadToday();
+    loadWeek();
+  });
+
+  // ── API calls ─────────────────────────────────────────────────────
+  async function loadToday() {
+    try {
+      const res = await fetch('/api/today');
+      if (!res.ok) throw new Error('no workout');
+      const data = await res.json();
+      todayWorkout = data.workout;
+      renderToday(todayWorkout);
+    } catch (e) {
+      renderNoWorkout();
+    }
+  }
+
+  async function loadWeek() {
+    try {
+      const res = await fetch('/api/week');
+      const data = await res.json();
+      weekWorkouts = data;
+      renderWeek(weekWorkouts);
+    } catch (e) {
+      console.error('Failed to load week', e);
+    }
+  }
+
+  // ── Render helpers ────────────────────────────────────────────────
+  function workoutPillClass(type) {
+    if (!type) return 'pill-rest';
+    const t = type.toLowerCase();
+    if (t.includes('hike')) return 'pill-hike';
+    if (t.includes('strength')) return 'pill-strength';
+    if (t.includes('walk') || t.includes('run')) return 'pill-walkrun';
+    return 'pill-rest';
+  }
+
+  function workoutEmoji(type) {
+    if (!type) return '😴';
+    const t = type.toLowerCase();
+    if (t.includes('hike')) return '🥾';
+    if (t.includes('strength')) return '💪';
+    if (t.includes('walk') || t.includes('run')) return '🏃';
+    if (t.includes('recovery')) return '🚶';
+    return '😴';
+  }
+
+  function formatDateLabel(isoDate) {
+    const d = new Date(isoDate + 'T12:00:00');
+    const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    return `${days[d.getDay()]} · ${dd}.${mm}.${d.getFullYear()}`;
+  }
+
+  function formatDateFull(isoDate) {
+    const d = new Date(isoDate + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  }
+
+  function isStrengthOnly(type) {
+    if (!type) return false;
+    const t = type.toLowerCase();
+    return t.includes('strength') || t.includes('rest') || t.includes('recovery') || t.includes('mobility') || t.includes('checkpoint');
+  }
+
+  // ── Today screen ──────────────────────────────────────────────────
+  function renderToday(w) {
+    // Header meta
+    document.getElementById('today-phase').textContent = w.phase || 'Training';
+    document.getElementById('today-date-label').textContent = formatDateLabel(w.date);
+    document.getElementById('today-pill').className = `type-pill ${workoutPillClass(w.workout_type)}`;
+    document.getElementById('today-pill').textContent = `${workoutEmoji(w.workout_type)} ${(w.workout_type || '').toUpperCase()}`;
+    document.getElementById('workout-title').textContent = w.workout_type || '—';
+    document.getElementById('workout-planned').textContent =
+      [w.planned_distance, w.planned_elev].filter(Boolean).join(' · ') || 'No target set';
+    document.getElementById('workout-desc').textContent = w.description || '';
+
+    // Hide distance/vert for non-hike/run days
+    const hideDistVert = isStrengthOnly(w.workout_type);
+    document.getElementById('dist-vert-row').style.display = hideDistVert ? 'none' : '';
+
+    // Pre-fill if already logged
+    if (w.actual_distance || w.actual_time || w.notes) {
+      document.getElementById('actual-miles').value = w.actual_distance || '';
+      document.getElementById('actual-vert').value = w.actual_elev || '';
+      const timeParts = (w.actual_time || '').match(/(\d+)h\s*(\d+)m/);
+      if (timeParts) {
+        document.getElementById('actual-hours').value = timeParts[1];
+        document.getElementById('actual-mins').value = timeParts[2];
+      }
+      document.getElementById('actual-notes').value = w.notes || '';
+    }
+  }
+
+  function renderNoWorkout() {
+    document.getElementById('workout-title').textContent = 'Rest Day';
+    document.getElementById('workout-planned').textContent = 'No workout scheduled';
+    document.getElementById('workout-desc').textContent = 'Nothing on the plan today. Rest up.';
+  }
+
+  // ── Week screen ───────────────────────────────────────────────────
+  function renderWeek(workouts) {
+    if (!workouts.length) return;
+    const todayIso = new Date().toISOString().split('T')[0];
+
+    // Update week header
+    const monday = workouts.find(w => new Date(w.date + 'T12:00:00').getDay() === 1);
+    const sunday = workouts.find(w => new Date(w.date + 'T12:00:00').getDay() === 0);
+    if (monday && sunday) {
+      const m = new Date(monday.date + 'T12:00:00');
+      const s = new Date(sunday.date + 'T12:00:00');
+      document.getElementById('week-period').textContent =
+        `${m.getDate()}.${String(m.getMonth()+1).padStart(2,'0')}–${s.getDate()}.${String(s.getMonth()+1).padStart(2,'0')}.${s.getFullYear()}`;
+    }
+
+    // Phase from first non-rest workout
+    const phaseWorkout = workouts.find(w => w.phase);
+    if (phaseWorkout) {
+      document.getElementById('week-phase-label').textContent = phaseWorkout.phase || '';
+    }
+
+    // Summary stats
+    const logged = workouts.filter(w => w.actual_distance || w.actual_time || w.notes).length;
+    const total = workouts.filter(w => !w.workout_type.toLowerCase().includes('rest')).length;
+    const totalMiles = workouts.reduce((sum, w) => sum + (parseFloat(w.actual_distance) || 0), 0);
+    const totalElev = workouts.reduce((sum, w) => sum + (parseInt(w.actual_elev) || 0), 0);
+    document.getElementById('week-objectives').textContent = `${logged} / ${total}`;
+    document.getElementById('week-miles').textContent = totalMiles > 0 ? `${totalMiles.toFixed(1)} mi` : '0 mi';
+    document.getElementById('week-elev').textContent = totalElev > 0 ? `${totalElev.toLocaleString()} ft` : '0 ft';
+
+    // Day cards
+    const container = document.getElementById('week-days');
+    container.innerHTML = '';
+    workouts.forEach(w => {
+      const isToday = w.date === todayIso;
+      const isLogged = !!(w.actual_distance || w.actual_time || w.notes);
+      const dayLabel = formatDateLabel(w.date).split(' · ');
+      const plannedSub = [w.planned_distance, w.planned_elev].filter(Boolean).join(' · ');
+      const loggedSub = [w.actual_distance ? w.actual_distance + ' MI' : '', w.actual_time].filter(Boolean).join(' · ');
+
+      let cardClass = 'day-card';
+      if (isToday) cardClass += ' today';
+      else if (isLogged) cardClass += ' logged';
+
+      let indClass = 'ind-gray';
+      if (isToday) indClass = 'ind-red';
+      else if (isLogged) indClass = 'ind-green';
+
+      const dateDisplay = isToday
+        ? `<div class="day-today-badge">▶ ACTIVE OBJECTIVE</div>`
+        : `<div class="day-date">${dayLabel[0]} · ${dayLabel[1]}</div>`;
+
+      const subLine = isLogged && loggedSub
+        ? `<div class="day-sub sub-logged">${loggedSub}</div>`
+        : (plannedSub ? `<div class="day-sub sub-planned">PLANNED: ${plannedSub.toUpperCase()}</div>` : '');
+
+      const onclick = isToday
+        ? `switchScreen('today')`
+        : `openWorkoutModal('${w.date}')`;
+
+      container.innerHTML += `
+        <div class="${cardClass}" onclick="${onclick}">
+          <div class="day-left">
+            <div class="status-indicator ${indClass}"></div>
+            <div class="day-info">
+              ${dateDisplay}
+              <div class="day-name">${w.workout_type || 'Rest'}</div>
+              ${subLine}
+            </div>
+          </div>
+          <div class="day-right">
+            <span class="type-pill ${workoutPillClass(w.workout_type)}">${workoutEmoji(w.workout_type)} ${(w.workout_type || 'REST').toUpperCase()}</span>
+            <svg class="chevron" width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </div>
+        </div>`;
+    });
+  }
+
+  // ── Nav ───────────────────────────────────────────────────────────
+  function switchScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('nav-' + name).classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  // ── Log form ──────────────────────────────────────────────────────
+  function selectFeel(el) {
+    document.querySelectorAll('.assess-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedFeel = el.dataset.feel;
+  }
+
+  function setStatus(type, el) {
+    document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    selectedStatus = type;
+    if (type === 'compromised') {
+      setTimeout(() => alert('🔴 COMPROMISED STATUS LOGGED\n\nRest and ice affected joints. If swelling persists beyond 48 hours, contact your rheumatologist. Skip next strength session — it will hold.'), 200);
+    }
+  }
+
+  async function saveLog() {
+    if (!todayWorkout) return;
+    const miles = document.getElementById('actual-miles').value;
+    const vert = document.getElementById('actual-vert').value;
+    const hrs = document.getElementById('actual-hours').value || '0';
+    const mins = document.getElementById('actual-mins').value || '0';
+    const notes = document.getElementById('actual-notes').value;
+
+    const timeStr = `${hrs}h ${mins}m`;
+    const notesWithMeta = [
+      notes,
+      selectedFeel ? `Feel: ${selectedFeel}` : '',
+      selectedStatus ? `RA: ${selectedStatus.toUpperCase()}` : ''
+    ].filter(Boolean).join(' | ');
+
+    // Write to sheet
+    const res = await fetch('/api/log', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        row_index: todayWorkout.row_index,
+        actual_distance: miles,
+        actual_elev: vert,
+        actual_time: timeStr,
+        notes: notesWithMeta
+      })
+    });
+
+    if (res.ok) {
+      // Update summary
+      document.getElementById('summary-miles').textContent = miles ? miles + ' mi' : '—';
+      document.getElementById('summary-vert').textContent = vert ? parseInt(vert).toLocaleString() : '—';
+      const t = (parseInt(hrs) > 0 ? hrs + 'h ' : '') + (parseInt(mins) > 0 ? mins + 'm' : '');
+      document.getElementById('summary-time').textContent = t || '—';
+
+      document.getElementById('log-section').style.display = 'none';
+      document.getElementById('logged-section').style.display = 'block';
+
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+  }
+
+  function editLog() {
+    document.getElementById('log-section').style.display = 'block';
+    document.getElementById('logged-section').style.display = 'none';
+  }
+
+  // ── Workout detail modal ──────────────────────────────────────────
+  async function openWorkoutModal(date) {
+    try {
+      const res = await fetch(`/api/workout/${date}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const w = data.workout;
+      const isLogged = !!(w.actual_distance || w.actual_time || w.notes);
+      const loggedSummary = [w.actual_distance ? w.actual_distance + ' MI' : '', w.actual_time, w.notes].filter(Boolean).join(' · ');
+
+      document.getElementById('modal-content').innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <span class="type-pill ${workoutPillClass(w.workout_type)}">${workoutEmoji(w.workout_type)} ${(w.workout_type||'').toUpperCase()}</span>
+          ${isLogged ? '<span class="modal-logged-badge">✓ COMPLETE</span>' : ''}
+        </div>
+        <div class="modal-heading">${w.workout_type || 'Rest'}</div>
+        <div class="modal-sub">${formatDateLabel(w.date)}</div>
+        <div class="modal-desc">${(w.description || '').replace(/\n/g,'<br>')}</div>
+        ${w.planned_distance || w.planned_elev ? `
+        <div class="modal-planned">
+          <div class="modal-planned-label">Planned</div>
+          <div class="modal-planned-val">${[w.planned_distance, w.planned_elev].filter(Boolean).join(' · ').toUpperCase()}</div>
+        </div>` : ''}
+        ${isLogged ? `<div style="margin-top:12px;"><div class="modal-logged-badge">✓ ${loggedSummary || 'LOGGED'}</div></div>` : ''}
+      `;
+      document.getElementById('modal-overlay').classList.add('open');
+    } catch(e) {
+      console.error('Modal error', e);
+    }
+  }
+
+  function closeModal(e) {
+    if (e.target === document.getElementById('modal-overlay')) {
+      document.getElementById('modal-overlay').classList.remove('open');
+    }
+  }
+</script>
+</body>
+</html>
