@@ -139,5 +139,53 @@ def api_log():
     return jsonify({'status': 'ok', 'row': row_index})
 
 
+STRENGTH_WORKOUTS = {
+    'A': {
+        'session': 'Session A — Tuesday',
+        'focus': 'Lower body strength — the hard session',
+        'warmup': 'Leg swings x10 each direction, hip circles x10 each side, bodyweight squat x10 slow',
+        'exercises': [
+            {'name': 'Eccentric step-downs', 'sets': '3 × 15 each leg', 'tempo': '3 sec down, stand up with both', 'rest': '45 sec', 'notes': '6–8 inch step. Slow lower is everything. RA mod: hold wall lightly for balance.'},
+            {'name': 'Bulgarian split squats', 'sets': '3 × 10 each leg', 'tempo': 'Controlled', 'rest': '45 sec', 'notes': 'Rear foot on bench/couch. Bodyweight to start; add 8–10 lb from Wk 5 if pain-free.'},
+            {'name': 'Hip thrusters', 'sets': '3 × 15', 'tempo': '1 sec pause at top', 'rest': '45 sec', 'notes': 'Shoulders on bench, feet flat. Bodyweight first; add weight from Wk 3 if easy.'},
+            {'name': 'Straight-leg calf raises', 'sets': '3 × 15', 'tempo': '3-1-3 slow', 'rest': '30 sec', 'notes': 'Both legs to start; single-leg from Wk 4. Supports RA feet and ankles.'},
+            {'name': 'Side plank', 'sets': '3 × 30 sec each side', 'tempo': 'Hold', 'rest': '30 sec', 'notes': 'On elbow. Increase to 45 sec from Wk 5.'},
+        ]
+    },
+    'B': {
+        'session': 'Session B — Thursday',
+        'focus': 'Stability + endurance — lower intensity',
+        'warmup': 'Hip circles x10, glute bridges x10, ankle rolls x10 each',
+        'exercises': [
+            {'name': 'Wall sit', 'sets': '3 × 45 sec', 'tempo': 'Hold', 'rest': '45 sec', 'notes': 'Thighs parallel to floor. 60 sec from Wk 3, 75 sec from Wk 6. Low joint stress — good on RA days.'},
+            {'name': 'Step-ups', 'sets': '3 × 12 each leg', 'tempo': 'Controlled, drive through heel', 'rest': '45 sec', 'notes': 'Sturdy chair or box (12–16 in). Add 10 lb pack Wk 3, 15 lb Wk 6.'},
+            {'name': 'Single-leg RDL', 'sets': '3 × 10 each leg', 'tempo': 'Slow and controlled', 'rest': '45 sec', 'notes': 'Bodyweight only. Hinge at hip, slight knee bend — don\'t round the back.'},
+            {'name': 'Banded side walks', 'sets': '3 × 20 each direction', 'tempo': 'Controlled steps', 'rest': '30 sec', 'notes': 'Light band above knees. Protects knee tracking with RA.'},
+            {'name': 'Dead bugs', 'sets': '3 × 10 each side', 'tempo': 'Slow, exhale on extend', 'rest': '30 sec', 'notes': 'Lie on back, extend opposite arm/leg, keep low back flat.'},
+        ]
+    },
+    'C': {
+        'session': 'Session C — Friday (Week 5+)',
+        'focus': 'Upper body + core — legs fresh for Saturday hike',
+        'warmup': 'Arm circles x10, band pull-aparts x10, cat-cow x10',
+        'exercises': [
+            {'name': 'Push-ups', 'sets': '3 × 10', 'tempo': 'Controlled', 'rest': '45 sec', 'notes': 'Standard or incline. RA mod: on fists or push-up handles if wrists reactive.'},
+            {'name': 'Band rows', 'sets': '3 × 15', 'tempo': 'Pull elbows back, 1 sec squeeze', 'rest': '45 sec', 'notes': 'Band anchored to door/post. Back + shoulder strength for pole drive on uphills.'},
+            {'name': 'Plank', 'sets': '3 × 30–45 sec', 'tempo': 'Hold', 'rest': '30 sec', 'notes': 'On forearms. Increase to 60 sec from Wk 5.'},
+            {'name': 'Bird dogs', 'sets': '3 × 10 each side', 'tempo': 'Slow, 2 sec hold', 'rest': '30 sec', 'notes': 'Opposite arm + leg. Back stability for uneven terrain.'},
+            {'name': 'Hip flexor + hamstring stretch', 'sets': '2 × 30 sec each side', 'tempo': 'Hold', 'rest': '—', 'notes': 'Low lunge (hip flexor) + standing hamstring fold. Active recovery — legs ready for Saturday.'},
+        ]
+    }
+}
+
+
+@app.route('/api/strength/<session>')
+def api_strength(session):
+    key = session.upper()
+    if key not in STRENGTH_WORKOUTS:
+        return jsonify({'error': f'Unknown session: {session}'}), 404
+    return jsonify(STRENGTH_WORKOUTS[key])
+
+
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
