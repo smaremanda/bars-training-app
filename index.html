@@ -47,12 +47,10 @@
     body.light .bottom-nav {
       background: rgba(240,239,233,0.96);
     }
-    body.light .phone::before {
-      background-image:
-        linear-gradient(rgba(180,0,0,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(180,0,0,0.04) 1px, transparent 1px);
-      background-size: 40px 40px;
-    }
+    body.light .ra-alert-text { color: #B00000; }
+    body.light .ra-note-body { color: #444444; }
+    body.light .ra-note-title { color: #B00000; }
+    body.light .phone::before { display: none; }
     body.light::before { display: none; }
 
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -172,7 +170,7 @@
       font-family: 'Inter', sans-serif;
       font-size: 11px;
       font-weight: 500;
-      color: #AAAAAA;
+      color: var(--text-muted);
       letter-spacing: 0.1em;
       text-transform: uppercase;
       margin-bottom: 4px;
@@ -201,7 +199,7 @@
       font-family: 'Inter', sans-serif;
       font-size: 10px;
       font-weight: 500;
-      color: #999999;
+      color: var(--text-muted);
       letter-spacing: 0.06em;
       text-transform: uppercase;
     }
@@ -288,7 +286,7 @@
 
     .workout-desc {
       font-size: 14px;
-      color: #D8D8D8;
+      color: var(--text-dim);
       line-height: 1.65;
       border-top: 1px solid var(--border);
       padding-top: 10px;
@@ -356,7 +354,7 @@
       font-family: 'Inter', sans-serif;
       font-size: 11px;
       font-weight: 600;
-      color: #AAAAAA;
+      color: var(--text-muted);
       letter-spacing: 0.06em;
       text-transform: uppercase;
       margin-bottom: 6px;
@@ -642,7 +640,7 @@
       font-family: 'Inter', sans-serif;
       font-size: 10px;
       font-weight: 500;
-      color: #999999;
+      color: var(--text-muted);
       letter-spacing: 0.05em;
       text-transform: uppercase;
       margin-top: 2px;
@@ -695,7 +693,7 @@
       font-family: 'Inter', sans-serif;
       font-size: 11px;
       font-weight: 500;
-      color: #999999;
+      color: var(--text-muted);
       letter-spacing: 0.02em;
       text-transform: uppercase;
       margin-bottom: 2px;
