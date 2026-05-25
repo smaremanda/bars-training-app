@@ -86,7 +86,8 @@ def index():
 
 @app.route('/api/today')
 def api_today():
-    target = today_iso()
+    # Client passes its local date to avoid server UTC timezone mismatch
+    target = request.args.get('date') or today_iso()
     rows = get_all_rows()
     for i, row in enumerate(rows):
         if row and row[0].strip() == target:
@@ -96,7 +97,13 @@ def api_today():
 
 @app.route('/api/week')
 def api_week():
-    dates = set(week_iso_range())
+    # Client passes its local date anchor to avoid UTC mismatch
+    anchor = request.args.get('date')
+    if anchor:
+        today = datetime.strptime(anchor, '%Y-%m-%d')
+        dates = set([(today + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)])
+    else:
+        dates = set(week_iso_range())
     rows = get_all_rows()
     week = []
     for i, row in enumerate(rows):

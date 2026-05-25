@@ -1259,7 +1259,7 @@
   // ── API calls ─────────────────────────────────────────────────────
   async function loadToday() {
     try {
-      const res = await fetch('/api/today');
+      const res = await fetch('/api/today?date=' + localIsoDate());
       if (!res.ok) throw new Error('no workout');
       const data = await res.json();
       todayWorkout = data.workout;
@@ -1271,7 +1271,7 @@
 
   async function loadWeek() {
     try {
-      const res = await fetch('/api/week');
+      const res = await fetch('/api/week?date=' + localIsoDate());
       const data = await res.json();
       weekWorkouts = data;
       renderWeek(weekWorkouts);
