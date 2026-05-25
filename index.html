@@ -33,12 +33,12 @@
       --surface3: #ECEAE3;
       --border: #D8D6CE;
       --border-red: rgba(180,0,0,0.3);
-      --text: #1A1A1A;
-      --text-dim: #383838;
-      --text-muted: #767676;
-      --green: #1E9E52;
-      --green-dim: rgba(30,158,82,0.1);
-      --amber: #C07A00;
+      --text: #111111;
+      --text-dim: #2E2E2E;
+      --text-muted: #5A5A5A;
+      --green: #1A8A46;
+      --green-dim: rgba(26,138,70,0.1);
+      --amber: #A86800;
     }
     body.light { background: #E8E6DF; }
     body.light .header {
@@ -169,10 +169,11 @@
     }
 
     .operative-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
       color: #AAAAAA;
-      letter-spacing: 0.15em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       margin-bottom: 4px;
     }
@@ -197,10 +198,11 @@
       gap: 2px;
     }
     .meta-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 9px;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
       color: #999999;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
     }
     .meta-value {
@@ -217,10 +219,11 @@
 
     /* ── SECTION LABEL ── */
     .section-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
-      color: #999999;
-      letter-spacing: 0.18em;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.12em;
       text-transform: uppercase;
       display: flex;
       align-items: center;
@@ -308,11 +311,11 @@
       flex-shrink: 0;
     }
     .ra-alert-text {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
       color: #FF6B6B;
       line-height: 1.5;
-      letter-spacing: 0.02em;
     }
 
     /* ── DATE STRIP ── */
@@ -350,10 +353,11 @@
       margin-bottom: 14px;
     }
     .field-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
       color: #AAAAAA;
-      letter-spacing: 0.14em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       margin-bottom: 6px;
       display: block;
@@ -432,10 +436,10 @@
     }
     .assess-emoji { font-size: 18px; display: block; margin-bottom: 4px; }
     .assess-text {
-      font-family: 'Barlow Condensed', sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
+      font-weight: 600;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
       color: var(--text-dim);
     }
@@ -451,10 +455,10 @@
       text-align: center;
       cursor: pointer;
       transition: all 0.15s;
-      font-family: 'Barlow Condensed', sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
+      font-weight: 600;
+      letter-spacing: 0.03em;
       text-transform: uppercase;
       color: var(--text-dim);
     }
@@ -551,10 +555,11 @@
       color: var(--text);
     }
     .stat-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 9px;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
       color: var(--text-muted);
-      letter-spacing: 0.12em;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
       margin-top: 2px;
     }
@@ -596,9 +601,10 @@
     .nav-btn .nav-icon svg { color: var(--text-muted); stroke: var(--text-muted); }
     .nav-btn.active .nav-icon svg { stroke: var(--red-bright); }
     .nav-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 9px;
-      letter-spacing: 0.12em;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--text-muted);
     }
@@ -633,10 +639,11 @@
       color: var(--text);
     }
     .sum-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 9px;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
       color: #999999;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
       margin-top: 2px;
     }
@@ -685,34 +692,36 @@
 
     .day-info {}
     .day-date {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
       color: #999999;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.02em;
       text-transform: uppercase;
       margin-bottom: 2px;
     }
     .day-today-badge {
-      font-family: 'Space Mono', monospace;
-      font-size: 9px;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
       color: var(--red-bright);
-      letter-spacing: 0.12em;
+      letter-spacing: 0.06em;
       margin-bottom: 2px;
     }
     .day-name {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 16px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
       font-weight: 700;
       color: var(--text);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.02em;
       line-height: 1;
     }
     .day-sub {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
       margin-top: 3px;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.01em;
     }
     .sub-logged { color: var(--green); }
     .sub-planned { color: #888888; }
@@ -738,11 +747,11 @@
       margin-bottom: 4px;
     }
     .ra-note-body {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 400;
       color: #AAAAAA;
       line-height: 1.6;
-      letter-spacing: 0.02em;
     }
 
     /* ── MODAL ── */
@@ -787,10 +796,11 @@
       margin-bottom: 4px;
     }
     .modal-sub {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
       color: var(--text-muted);
-      letter-spacing: 0.08em;
+      letter-spacing: 0.02em;
       margin-bottom: 14px;
     }
     .modal-desc {
@@ -808,10 +818,11 @@
       padding: 10px 12px;
     }
     .modal-planned-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 9px;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
       color: var(--text-muted);
-      letter-spacing: 0.15em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       margin-bottom: 3px;
     }
