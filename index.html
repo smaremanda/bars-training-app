@@ -868,6 +868,103 @@
     /* Divider */
     .divider { height: 1px; background: var(--border); margin: 16px 0; }
 
+    /* ── PIN SCREEN ── */
+    #screen-pin {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 40px 32px;
+    }
+    #screen-pin.hidden { display: none; }
+    .pin-logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .pin-subtitle {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 48px;
+    }
+    .pin-dots {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    .pin-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: transparent;
+      transition: all 0.15s;
+    }
+    .pin-dot.filled {
+      background: var(--red);
+      border-color: var(--red);
+      box-shadow: 0 0 8px var(--red-glow);
+    }
+    .pin-dot.error {
+      background: var(--red-bright);
+      border-color: var(--red-bright);
+      animation: shake 0.4s ease;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+    .pin-pad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      width: 100%;
+      max-width: 280px;
+    }
+    .pin-key {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 0;
+      text-align: center;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      transition: all 0.1s;
+      user-select: none;
+    }
+    .pin-key:active { background: var(--surface2); transform: scale(0.95); }
+    .pin-key.wide { grid-column: span 1; }
+    .pin-key.del { font-size: 18px; color: var(--text-muted); }
+    .pin-error-msg {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--red-bright);
+      margin-top: 20px;
+      letter-spacing: 0.04em;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .pin-error-msg.show { opacity: 1; }
+
     /* ── THEME TOGGLE ── */
     .theme-toggle {
       background: transparent;
@@ -956,6 +1053,33 @@
   </style>
 </head>
 <body>
+<!-- PIN SCREEN -->
+<div id="screen-pin" class="hidden">
+  <div class="pin-logo">BARS</div>
+  <div class="pin-subtitle">Field Ops · Enter Access Code</div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="dot-0"></div>
+    <div class="pin-dot" id="dot-1"></div>
+    <div class="pin-dot" id="dot-2"></div>
+    <div class="pin-dot" id="dot-3"></div>
+  </div>
+  <div class="pin-pad">
+    <div class="pin-key" onclick="pinPress('1')">1</div>
+    <div class="pin-key" onclick="pinPress('2')">2</div>
+    <div class="pin-key" onclick="pinPress('3')">3</div>
+    <div class="pin-key" onclick="pinPress('4')">4</div>
+    <div class="pin-key" onclick="pinPress('5')">5</div>
+    <div class="pin-key" onclick="pinPress('6')">6</div>
+    <div class="pin-key" onclick="pinPress('7')">7</div>
+    <div class="pin-key" onclick="pinPress('8')">8</div>
+    <div class="pin-key" onclick="pinPress('9')">9</div>
+    <div class="pin-key del" onclick="pinClear()">✕</div>
+    <div class="pin-key" onclick="pinPress('0')">0</div>
+    <div class="pin-key del" onclick="pinBackspace()">⌫</div>
+  </div>
+  <div class="pin-error-msg" id="pin-error">Incorrect code — try again</div>
+</div>
+
 <div class="phone">
 
   <!-- ══════════════════════════════════
@@ -1219,6 +1343,71 @@
 </div>
 
 <script>
+  // ── PIN ───────────────────────────────────────────────────────────
+  let pinBuffer = '';
+
+  function pinPress(digit) {
+    if (pinBuffer.length >= 4) return;
+    pinBuffer += digit;
+    updatePinDots();
+    if (pinBuffer.length === 4) submitPin();
+  }
+
+  function pinBackspace() {
+    pinBuffer = pinBuffer.slice(0, -1);
+    updatePinDots();
+  }
+
+  function pinClear() {
+    pinBuffer = '';
+    updatePinDots();
+  }
+
+  function updatePinDots() {
+    for (let i = 0; i < 4; i++) {
+      const dot = document.getElementById('dot-' + i);
+      dot.classList.toggle('filled', i < pinBuffer.length);
+      dot.classList.remove('error');
+    }
+  }
+
+  async function submitPin() {
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({pin: pinBuffer})
+      });
+      if (res.ok) {
+        document.getElementById('screen-pin').classList.add('hidden');
+        loadToday();
+        loadWeek();
+      } else {
+        // Wrong PIN — shake and reset
+        for (let i = 0; i < 4; i++) document.getElementById('dot-' + i).classList.add('error');
+        document.getElementById('pin-error').classList.add('show');
+        setTimeout(() => {
+          pinBuffer = '';
+          updatePinDots();
+          document.getElementById('pin-error').classList.remove('show');
+        }, 1200);
+      }
+    } catch(e) {
+      pinBuffer = '';
+      updatePinDots();
+    }
+  }
+
+  async function checkAuth() {
+    // Try a lightweight auth-check — if /api/today returns 401, show PIN screen
+    const res = await fetch('/api/today?date=' + localIsoDate());
+    if (res.status === 401) {
+      document.getElementById('screen-pin').classList.remove('hidden');
+      return false;
+    }
+    return true;
+  }
+
   // ── State ─────────────────────────────────────────────────────────
   let selectedFeel = '';
   let selectedStatus = '';
@@ -1250,10 +1439,13 @@
   }
 
   // ── Boot ──────────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     applyTheme();
-    loadToday();
-    loadWeek();
+    const authed = await checkAuth();
+    if (authed) {
+      loadToday();
+      loadWeek();
+    }
   });
 
   // ── API calls ─────────────────────────────────────────────────────

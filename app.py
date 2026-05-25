@@ -1,7 +1,8 @@
 import os
 import json
 from datetime import datetime, timedelta
-from flask import Flask, send_from_directory, jsonify, request
+from functools import wraps
+from flask import Flask, send_from_directory, jsonify, request, session
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
@@ -9,6 +10,21 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__, static_folder='.', static_url_path='')
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-change-in-prod')
+app.permanent_session_lifetime = timedelta(days=30)
+
+APP_PIN = os.environ.get('APP_PIN', '')
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not APP_PIN:          # no PIN configured → open access
+            return f(*args, **kwargs)
+        if not session.get('authenticated'):
+            return jsonify({'error': 'unauthorized'}), 401
+        return f(*args, **kwargs)
+    return decorated
 
 SPREADSHEET_ID = '1u3eVEQMuA_HPEhUjm2Nah3VdhO-dQ-EmlBm6Zmjhc-k'
 SHEET_NAME = 'Sheet1'
@@ -84,7 +100,26 @@ def index():
     return send_from_directory('.', 'index.html')
 
 
+@app.route('/api/auth', methods=['POST'])
+def api_auth():
+    if not APP_PIN:
+        return jsonify({'status': 'ok'})
+    data = request.json or {}
+    if str(data.get('pin', '')).strip() == str(APP_PIN).strip():
+        session.permanent = True
+        session['authenticated'] = True
+        return jsonify({'status': 'ok'})
+    return jsonify({'error': 'wrong pin'}), 401
+
+
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    session.clear()
+    return jsonify({'status': 'ok'})
+
+
 @app.route('/api/today')
+@login_required
 def api_today():
     # Client passes its local date to avoid server UTC timezone mismatch
     target = request.args.get('date') or today_iso()
@@ -96,6 +131,7 @@ def api_today():
 
 
 @app.route('/api/week')
+@login_required
 def api_week():
     # Client passes its local date anchor to avoid UTC mismatch
     anchor = request.args.get('date')
@@ -114,6 +150,7 @@ def api_week():
 
 
 @app.route('/api/workout/<date>')
+@login_required
 def api_workout(date):
     rows = get_all_rows()
     for i, row in enumerate(rows):
@@ -123,6 +160,7 @@ def api_workout(date):
 
 
 @app.route('/api/log', methods=['POST'])
+@login_required
 def api_log():
     data = request.json
     row_index = data.get('row_index')
@@ -187,6 +225,7 @@ STRENGTH_WORKOUTS = {
 
 
 @app.route('/api/strength/<session>')
+@login_required
 def api_strength(session):
     key = session.upper()
     if key not in STRENGTH_WORKOUTS:
