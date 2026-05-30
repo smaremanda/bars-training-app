@@ -1282,7 +1282,7 @@
         <div class="avatar">B</div>
       </div>
       <div class="operative-label">MISSION TIMELINE</div>
-      <div class="operative-name">This Week</div>
+      <div class="operative-name">Timeline</div>
       <div class="mission-meta">
         <div class="meta-item">
           <span class="meta-label">Period</span>
@@ -1520,6 +1520,35 @@
     return t.includes('strength') || t.includes('rest') || t.includes('recovery') || t.includes('mobility') || t.includes('checkpoint');
   }
 
+  // Notes column is stored as: "free-text | Feel: X | RA: STATUS"
+  // Split it back into its parts so re-edits show what was previously selected.
+  function parseNotes(raw) {
+    const out = {notes: '', feel: '', status: ''};
+    if (!raw) return out;
+    raw.split('|').map(s => s.trim()).forEach(p => {
+      if (!p) return;
+      if (p.startsWith('Feel:')) out.feel = p.slice(5).trim();
+      else if (p.startsWith('RA:')) out.status = p.slice(3).trim().toLowerCase();
+      else if (!out.notes) out.notes = p;
+    });
+    return out;
+  }
+
+  function splitTime(t) {
+    const m = (t || '').match(/(\d+)h\s*(\d+)m/);
+    return {h: m ? m[1] : '', m: m ? m[2] : ''};
+  }
+
+  // Silently pre-select feel/status buttons within a scope (no alerts).
+  function preselectFeelStatus(scope, feel, status) {
+    scope.querySelectorAll('.assess-btn').forEach(b => {
+      b.classList.toggle('selected', !!feel && b.dataset.feel === feel);
+    });
+    scope.querySelectorAll('.status-btn').forEach(b => {
+      b.classList.toggle('active', !!status && b.classList.contains(status));
+    });
+  }
+
   // ── Today screen ──────────────────────────────────────────────────
   function renderToday(w) {
     // Header meta
@@ -1538,14 +1567,16 @@
 
     // Pre-fill if already logged
     if (w.actual_distance || w.actual_time || w.notes) {
+      const parsed = parseNotes(w.notes);
+      const t = splitTime(w.actual_time);
       document.getElementById('actual-miles').value = w.actual_distance || '';
       document.getElementById('actual-vert').value = w.actual_elev || '';
-      const timeParts = (w.actual_time || '').match(/(\d+)h\s*(\d+)m/);
-      if (timeParts) {
-        document.getElementById('actual-hours').value = timeParts[1];
-        document.getElementById('actual-mins').value = timeParts[2];
-      }
-      document.getElementById('actual-notes').value = w.notes || '';
+      document.getElementById('actual-hours').value = t.h;
+      document.getElementById('actual-mins').value = t.m;
+      document.getElementById('actual-notes').value = parsed.notes;
+      preselectFeelStatus(document.getElementById('screen-today'), parsed.feel, parsed.status);
+      selectedFeel = parsed.feel;
+      selectedStatus = parsed.status;
     }
   }
 
@@ -1560,15 +1591,12 @@
     if (!workouts.length) return;
     const todayIso = localIsoDate();
 
-    // Update week header
-    const monday = workouts.find(w => new Date(w.date + 'T12:00:00').getDay() === 1);
-    const sunday = workouts.find(w => new Date(w.date + 'T12:00:00').getDay() === 0);
-    if (monday && sunday) {
-      const m = new Date(monday.date + 'T12:00:00');
-      const s = new Date(sunday.date + 'T12:00:00');
-      document.getElementById('week-period').textContent =
-        `${m.getDate()}.${String(m.getMonth()+1).padStart(2,'0')}–${s.getDate()}.${String(s.getMonth()+1).padStart(2,'0')}.${s.getFullYear()}`;
-    }
+    // Window header — first..last date of the sliding window
+    const first = new Date(workouts[0].date + 'T12:00:00');
+    const last  = new Date(workouts[workouts.length - 1].date + 'T12:00:00');
+    const dm = d => `${d.getDate()}.${String(d.getMonth()+1).padStart(2,'0')}`;
+    document.getElementById('week-period').textContent =
+      `${dm(first)}–${dm(last)}.${last.getFullYear()}`;
 
     // Phase from first non-rest workout
     const phaseWorkout = workouts.find(w => w.phase);
@@ -1732,6 +1760,141 @@
       </div>`;
   }
 
+  // ── Modal log form (lets us backfill / amend any past or future day) ──
+  let modalWorkout = null;
+  let modalFeel = '';
+  let modalStatus = '';
+
+  const FEEL_OPTIONS = [
+    ['MINIMAL', '😴', 'Minimal'],
+    ['NOMINAL', '😊', 'Nominal'],
+    ['HEAVY',   '😤', 'Heavy'],
+    ['DOWN',    '💀', 'Down'],
+  ];
+  const STATUS_OPTIONS = [
+    ['clear',        '✅ Clear'],
+    ['caution',      '🟡 Caution'],
+    ['compromised',  '🔴 Compromised'],
+  ];
+
+  function selectFeelModal(el) {
+    document.querySelectorAll('#modal-content .assess-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    modalFeel = el.dataset.feel;
+  }
+
+  function setStatusModal(type, el) {
+    document.querySelectorAll('#modal-content .status-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    modalStatus = type;
+    if (type === 'compromised') {
+      setTimeout(() => alert('🔴 COMPROMISED STATUS LOGGED\n\nRest and ice affected joints. If swelling persists beyond 48 hours, contact your rheumatologist. Skip next strength session — it will hold.'), 200);
+    }
+  }
+
+  async function saveLogModal() {
+    if (!modalWorkout) return;
+    const miles = document.getElementById('m-actual-miles')?.value || '';
+    const vert  = document.getElementById('m-actual-vert')?.value || '';
+    const hrs   = document.getElementById('m-actual-hours').value || '0';
+    const mins  = document.getElementById('m-actual-mins').value || '0';
+    const notes = document.getElementById('m-actual-notes').value;
+
+    const timeStr = (hrs !== '0' || mins !== '0') ? `${hrs}h ${mins}m` : '';
+    const notesWithMeta = [
+      notes,
+      modalFeel ? `Feel: ${modalFeel}` : '',
+      modalStatus ? `RA: ${modalStatus.toUpperCase()}` : ''
+    ].filter(Boolean).join(' | ');
+
+    const res = await fetch('/api/log', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        row_index: modalWorkout.row_index,
+        actual_distance: miles,
+        actual_elev: vert,
+        actual_time: timeStr,
+        notes: notesWithMeta
+      })
+    });
+
+    if (res.ok) {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+      document.getElementById('modal-overlay').classList.remove('open');
+      loadWeek();
+      if (modalWorkout.date === localIsoDate()) loadToday();
+    }
+  }
+
+  function buildLogFormHTML(w) {
+    const parsed = parseNotes(w.notes);
+    const t = splitTime(w.actual_time);
+    const hideDistVert = isStrengthOnly(w.workout_type);
+
+    const distVert = hideDistVert ? '' : `
+      <div class="field-group">
+        <div class="field-row cols-2">
+          <div>
+            <label class="field-label">Distance</label>
+            <div class="input-wrap">
+              <input type="number" id="m-actual-miles" placeholder="0.0" step="0.1" min="0" value="${w.actual_distance || ''}" />
+              <span class="input-unit">MI</span>
+            </div>
+          </div>
+          <div>
+            <label class="field-label">Elevation</label>
+            <div class="input-wrap">
+              <input type="number" id="m-actual-vert" placeholder="0" step="100" min="0" value="${w.actual_elev || ''}" />
+              <span class="input-unit">FT</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    const feelBtns = FEEL_OPTIONS.map(([f, e, label]) => `
+      <div class="assess-btn ${parsed.feel === f ? 'selected' : ''}" data-feel="${f}" onclick="selectFeelModal(this)">
+        <span class="assess-emoji">${e}</span>
+        <span class="assess-text">${label}</span>
+      </div>`).join('');
+
+    const statusBtns = STATUS_OPTIONS.map(([s, label]) => `
+      <button class="status-btn ${s} ${parsed.status === s ? 'active' : ''}" onclick="setStatusModal('${s}', this)">${label}</button>`).join('');
+
+    return `
+      <div class="section-label" style="margin-top:18px;">DEBRIEF</div>
+      ${distVert}
+      <div class="field-group">
+        <label class="field-label">Duration</label>
+        <div class="field-row cols-2">
+          <div class="input-wrap">
+            <input type="number" id="m-actual-hours" placeholder="0" min="0" max="24" value="${t.h}" />
+            <span class="input-unit">HR</span>
+          </div>
+          <div class="input-wrap">
+            <input type="number" id="m-actual-mins" placeholder="0" min="0" max="59" value="${t.m}" />
+            <span class="input-unit">MIN</span>
+          </div>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Operative Assessment</label>
+        <div class="assess-grid">${feelBtns}</div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Field Notes <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+        <textarea class="field-input" id="m-actual-notes" rows="2" placeholder="Knee response? Joint issues? Anything to flag for HQ...">${parsed.notes}</textarea>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Physical Status Report</label>
+        <div class="status-grid">${statusBtns}</div>
+      </div>
+      <button class="transmit-btn" onclick="saveLogModal()">TRANSMIT FIELD REPORT ↗</button>
+    `;
+  }
+
   // ── Workout detail modal ──────────────────────────────────────────
   async function openWorkoutModal(date) {
     try {
@@ -1739,8 +1902,11 @@
       if (!res.ok) return;
       const data = await res.json();
       const w = data.workout;
+      modalWorkout = w;
+      const parsed = parseNotes(w.notes);
+      modalFeel = parsed.feel;
+      modalStatus = parsed.status;
       const isLogged = !!(w.actual_distance || w.actual_time || w.notes);
-      const loggedSummary = [w.actual_distance ? w.actual_distance + ' MI' : '', w.actual_time, w.notes].filter(Boolean).join(' · ');
 
       // Check for strength session and fetch exercises
       const session = getStrengthSession(w.workout_type);
@@ -1755,7 +1921,7 @@
       document.getElementById('modal-content').innerHTML = `
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
           <span class="type-pill ${workoutPillClass(w.workout_type)}">${workoutEmoji(w.workout_type)} ${(w.workout_type||'').toUpperCase()}</span>
-          ${isLogged ? '<span class="modal-logged-badge">✓ COMPLETE</span>' : ''}
+          ${isLogged ? '<span class="modal-logged-badge">✓ LOGGED</span>' : ''}
         </div>
         <div class="modal-heading">${w.workout_type || 'Rest'}</div>
         <div class="modal-sub">${formatDateLabel(w.date)}</div>
@@ -1765,7 +1931,7 @@
           <div class="modal-planned-label">Planned</div>
           <div class="modal-planned-val">${[w.planned_distance, w.planned_elev].filter(Boolean).join(' · ').toUpperCase()}</div>
         </div>` : ''}
-        ${isLogged ? `<div style="margin-top:12px;"><div class="modal-logged-badge">✓ ${loggedSummary || 'LOGGED'}</div></div>` : ''}
+        ${buildLogFormHTML(w)}
         ${strengthHTML}
       `;
       document.getElementById('modal-overlay').classList.add('open');

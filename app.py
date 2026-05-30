@@ -88,9 +88,15 @@ def today_iso():
     return datetime.now().strftime('%Y-%m-%d')
 
 
-def week_iso_range():
-    today = datetime.now()
-    return [(today + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)]
+# Timeline window: 3 days before the anchor through 7 days after (11 total).
+WINDOW_BEFORE = 3
+WINDOW_AFTER = 7
+
+
+def window_iso_range(anchor=None):
+    base = datetime.strptime(anchor, '%Y-%m-%d') if anchor else datetime.now()
+    return [(base + timedelta(days=i)).strftime('%Y-%m-%d')
+            for i in range(-WINDOW_BEFORE, WINDOW_AFTER + 1)]
 
 
 # ── Routes ────────────────────────────────────────────────────────────
@@ -133,20 +139,15 @@ def api_today():
 @app.route('/api/week')
 @login_required
 def api_week():
-    # Client passes its local date anchor to avoid UTC mismatch
+    # Sliding window centered on the client-provided anchor (avoids UTC drift).
+    # Returns WINDOW_BEFORE + 1 + WINDOW_AFTER days (default: 3 + 1 + 7 = 11).
     anchor = request.args.get('date')
-    if anchor:
-        today = datetime.strptime(anchor, '%Y-%m-%d')
-        dates = set([(today + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)])
-    else:
-        dates = set(week_iso_range())
+    dates = set(window_iso_range(anchor))
     rows = get_all_rows()
-    week = []
-    for i, row in enumerate(rows):
-        if row and row[0].strip() in dates:
-            week.append(row_to_dict(row, i + 2))
-    week.sort(key=lambda r: r['date'])
-    return jsonify(week)
+    days = [row_to_dict(row, i + 2) for i, row in enumerate(rows)
+            if row and row[0].strip() in dates]
+    days.sort(key=lambda r: r['date'])
+    return jsonify(days)
 
 
 @app.route('/api/workout/<date>')
