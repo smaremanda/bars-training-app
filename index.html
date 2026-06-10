@@ -1154,6 +1154,9 @@
         </div>
       </div>
 
+      <!-- Strength exercises (populated for Strength A/B/C days) -->
+      <div id="today-strength"></div>
+
       <!-- Log section -->
       <div id="log-section">
         <div class="section-label">DEBRIEF</div>
@@ -1565,6 +1568,11 @@
     const hideDistVert = isStrengthOnly(w.workout_type);
     document.getElementById('dist-vert-row').style.display = hideDistVert ? 'none' : '';
 
+    // Inject the Session A/B/C protocol if today is a strength day (else clear)
+    loadStrengthHTML(w.workout_type).then(html => {
+      document.getElementById('today-strength').innerHTML = html;
+    });
+
     // Pre-fill if already logged
     if (w.actual_distance || w.actual_time || w.notes) {
       const parsed = parseNotes(w.notes);
@@ -1760,6 +1768,17 @@
       </div>`;
   }
 
+  // Fetch + render the Session A/B/C protocol HTML, or '' for non-strength days.
+  async function loadStrengthHTML(workoutType) {
+    const session = getStrengthSession(workoutType);
+    if (!session) return '';
+    try {
+      const res = await fetch(`/api/strength/${session}`);
+      if (res.ok) return renderStrengthExercises(await res.json());
+    } catch (e) {}
+    return '';
+  }
+
   // ── Modal log form (lets us backfill / amend any past or future day) ──
   let modalWorkout = null;
   let modalFeel = '';
@@ -1908,15 +1927,7 @@
       modalStatus = parsed.status;
       const isLogged = !!(w.actual_distance || w.actual_time || w.notes);
 
-      // Check for strength session and fetch exercises
-      const session = getStrengthSession(w.workout_type);
-      let strengthHTML = '';
-      if (session) {
-        try {
-          const sRes = await fetch(`/api/strength/${session}`);
-          if (sRes.ok) strengthHTML = renderStrengthExercises(await sRes.json());
-        } catch(e) {}
-      }
+      const strengthHTML = await loadStrengthHTML(w.workout_type);
 
       document.getElementById('modal-content').innerHTML = `
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
